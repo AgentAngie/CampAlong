@@ -158,7 +158,7 @@
       ? '<img class="chat-card-img" src="' + esc(c.photoUrl) + '" alt="' + name + '" loading="lazy" />'
       : '<div class="chat-card-img"></div>';
 
-    return '<a class="chat-card" href="' + esc(appUrl) + '"' + (isExternal ? ' target="_blank" rel="noopener"' : '') + '>' +
+    return '<a class="chat-card" href="#" data-card-idx>' +
       imgHtml +
       '<div class="chat-card-body">' +
         '<div class="chat-card-name">' + name + '</div>' +
@@ -168,6 +168,18 @@
         '<span class="chat-card-watch">View details &amp; availability</span>' +
       '</div>' +
     '</a>';
+  }
+
+  function _attachCardListeners(results) {
+    var cards = cardsEl.querySelectorAll('.chat-card[data-card-idx]');
+    cards.forEach(function(card, i) {
+      var c = results[i];
+      if (!c) return;
+      card.addEventListener('click', function(e) {
+        e.preventDefault();
+        openHomeDetail(c);
+      });
+    });
   }
 
   function loadPhotos(results) {
@@ -379,12 +391,16 @@
     var shown = searchResults.slice(0, 6);
     if (shown.length) {
       cardsEl.innerHTML = shown.map(renderCard).join('');
+      _attachCardListeners(shown);
       // Persist so results survive navigation away and back
       try {
         sessionStorage.setItem('home_chat_state', JSON.stringify({
           query: q, chips: chipsEl.innerHTML, intro: introEl.textContent,
           cards: cardsEl.innerHTML, seeAll: seeAll.href,
+          results: shown,
         }));
+        // Also mirror to watch_state so Alerts tab auto-populates
+        sessionStorage.setItem('watch_query_mirror', q);
       } catch(_) {}
       loadPhotos(shown);
     } else {
@@ -408,6 +424,221 @@
     }
   }
 
+  // ── Campground detail overlay ─────────────────────────────────────────────
+
+  var _overlayEl   = document.getElementById('detail-overlay');
+  var _detailClose = document.getElementById('detail-close');
+
+  function _fmtDate(ds) {
+    var d = new Date(ds + 'T12:00:00');
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  function openHomeDetail(c) {
+    var overlay   = _overlayEl; if (!overlay) return;
+    var nameEl    = document.getElementById('detail-name');
+    var metaEl    = document.getElementById('detail-meta-row');
+    var badgeEl   = document.getElementById('detail-header-right');
+    var galleryEl = document.getElementById('detail-gallery');
+    var summarySection = document.getElementById('detail-summary-section');
+    var summaryEl = document.getElementById('detail-summary');
+    var tagsEl    = document.getElementById('detail-tags');
+    var availSection = document.getElementById('detail-avail-section');
+    var availBtn  = document.getElementById('detail-avail-btn');
+    var availRes  = document.getElementById('detail-avail-results');
+
+    // Reset
+    nameEl.textContent   = c.FacilityName || c.name || '';
+    metaEl.innerHTML     = c.location || (c.state ? esc(c.state) : '');
+    badgeEl.innerHTML    = '';
+    availRes.innerHTML   = '';
+    summarySection.style.display = 'none';
+
+    // Source badge
+    var source = c.source || 'recreation.gov';
+    if (source === 'county') {
+      badgeEl.innerHTML = '<span class="detail-src-badge detail-src-county">County Park</span>';
+    } else if (source === 'reservecalifornia' || source === 'reserve-california') {
+      badgeEl.innerHTML = '<span class="detail-src-badge detail-src-ca">ReserveCalifornia</span>';
+    } else {
+      badgeEl.innerHTML = '<span class="detail-src-badge detail-src-rec">Recreation.gov</span>';
+    }
+
+    // Gallery — placeholder while loading
+    galleryEl.innerHTML = '<div class="detail-gallery-placeholder"><span class="detail-gallery-placeholder-label">' + esc(c.FacilityName || c.name || '') + '</span></div>';
+
+    // For county parks: hide availability checker, show booking link
+    if (source === 'county') {
+      availSection.style.display = 'none';
+      // Show description + Book button
+      summarySection.style.display = '';
+      summaryEl.textContent = c.description || '';
+      tagsEl.innerHTML = (c.tags || []).map(function(t) {
+        return '<span class="detail-chip chip-best">' + esc(t) + '</span>';
+      }).join('');
+      // Replace avail section with a Book button
+      var bookDiv = document.getElementById('detail-county-book');
+      if (!bookDiv) {
+        bookDiv = document.createElement('div');
+        bookDiv.id = 'detail-county-book';
+        bookDiv.className = 'detail-county-book';
+        availSection.parentNode.insertBefore(bookDiv, availSection.nextSibling);
+      }
+      bookDiv.innerHTML = '<a href="' + esc(c.bookingUrl || '#') + '" target="_blank" rel="noopener" class="btn btn-primary">Book on county website</a>';
+    } else {
+      // Remove county book div if present
+      var old = document.getElementById('detail-county-book');
+      if (old) old.remove();
+      availSection.style.display = '';
+
+      // Default dates
+      var today    = new Date();
+      var checkin  = new Date(today); checkin.setDate(today.getDate() + 14);
+      var checkout = new Date(today); checkout.setDate(today.getDate() + 60);
+      document.getElementById('detail-checkin').value  = checkin.toISOString().slice(0, 10);
+      document.getElementById('detail-checkout').value = checkout.toISOString().slice(0, 10);
+
+      availBtn.onclick = function() { _checkHomeAvailability(c); };
+
+      // Load photo and AI summary in background
+      _loadHomePhoto(c);
+      _loadHomeSummary(c);
+    }
+
+    overlay.style.display = '';
+    document.body.style.overflow = 'hidden';
+  }
+
+  function _loadHomePhoto(c) {
+    var galleryEl = document.getElementById('detail-gallery');
+    if (!galleryEl) return;
+    var id = c.FacilityID || c.id;
+    if (!id || c.source === 'reservecalifornia' || c.source === 'reserve-california') return;
+    fetch('/api/campground/' + encodeURIComponent(id) + '/photos?source=recreation.gov')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var photos = (data && data.photos) ? data.photos : [];
+        if (!photos.length) return;
+        galleryEl.innerHTML = '<div class="detail-gallery-scroll">' +
+          photos.slice(0, 5).map(function(p, i) {
+            return '<div class="detail-gallery-item' + (i === 0 ? ' detail-gallery-main' : '') + '">' +
+              '<img src="' + esc(p.url) + '" alt="" loading="' + (i === 0 ? 'eager' : 'lazy') + '" onerror="this.parentElement.style.display=\'none\'">' +
+            '</div>';
+          }).join('') +
+        '</div>';
+      })
+      .catch(function() {});
+  }
+
+  function _loadHomeSummary(c) {
+    var section   = document.getElementById('detail-summary-section');
+    var summaryEl = document.getElementById('detail-summary');
+    var tagsEl    = document.getElementById('detail-tags');
+    if (!section || !summaryEl) return;
+
+    section.style.display = '';
+    summaryEl.innerHTML = '<span class="agent-shimmer" style="display:block;height:14px;margin-bottom:8px"></span>' +
+                          '<span class="agent-shimmer" style="display:block;height:14px;width:65%"></span>';
+    tagsEl.innerHTML = '';
+
+    var id   = c.FacilityID || c.id || '';
+    var name = c.FacilityName || c.name || '';
+    var state = c.state || '';
+    var params = 'name=' + encodeURIComponent(name) + '&state=' + encodeURIComponent(state);
+
+    fetch('/api/agent/summary/' + encodeURIComponent(id) + '?' + params)
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data && data.summary) {
+          summaryEl.textContent = data.summary;
+        } else {
+          section.style.display = 'none';
+          return;
+        }
+        if (data.highlights && data.highlights.length) {
+          tagsEl.innerHTML = data.highlights.map(function(h) {
+            return '<span class="detail-chip chip-best">' + esc(h) + '</span>';
+          }).join('');
+        }
+        if (data.crowdLevel) {
+          tagsEl.innerHTML += '<span class="detail-chip chip-crowd">' + esc(data.crowdLevel) + '</span>';
+        }
+      })
+      .catch(function() { section.style.display = 'none'; });
+  }
+
+  function _checkHomeAvailability(c) {
+    var checkin  = document.getElementById('detail-checkin').value;
+    var checkout = document.getElementById('detail-checkout').value;
+    var nights   = parseInt(document.getElementById('detail-nights').value) || 2;
+    var resultsEl = document.getElementById('detail-avail-results');
+    if (!checkin || !checkout || !resultsEl) return;
+
+    resultsEl.innerHTML = '<div class="loading"><div class="spinner"></div>Checking availability…</div>';
+
+    var id     = c.FacilityID || c.id || '';
+    var isRC   = c.source === 'reservecalifornia' || c.source === 'reserve-california';
+    var reqUrl, reqOpts;
+
+    if (isRC) {
+      reqUrl  = '/api/campground/' + encodeURIComponent(id) + '/availability/rc';
+      reqOpts = { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ facilityId: id, startDate: checkin, endDate: checkout, minNights: nights }) };
+    } else {
+      reqUrl  = '/api/campground/' + encodeURIComponent(id) + '/availability?startDate=' + checkin + '&endDate=' + checkout + '&minNights=' + nights;
+      reqOpts = {};
+    }
+
+    fetch(reqUrl, reqOpts)
+      .then(function(r) { return r.json(); })
+      .then(function(sites) {
+        if (!Array.isArray(sites) || !sites.length) {
+          resultsEl.innerHTML = '<div class="detail-avail-none">No sites available for those dates.</div>';
+          return;
+        }
+        var html = '<div class="detail-avail-found">' + sites.length + ' site' + (sites.length !== 1 ? 's' : '') + ' available</div>' +
+          '<div class="detail-avail-grid">' +
+          sites.slice(0, 12).map(function(s) {
+            var siteId  = s.siteId || s.unitId || '';
+            var bookUrl = isRC
+              ? 'https://www.reservecalifornia.com/Web/Default.aspx#!park/' + (c.parkId || id) + '/unit/' + siteId
+              : 'https://www.recreation.gov/camping/campsites/' + siteId;
+            return '<div class="detail-avail-site">' +
+              '<div class="detail-avail-site-name">' + esc(s.siteName || s.site || ('Site ' + siteId)) + '</div>' +
+              '<div class="detail-avail-site-meta">' + esc(s.siteType || '') + (s.availableWindows && s.availableWindows[0] ? ' · ' + _fmtDate(s.availableWindows[0].start) : '') + '</div>' +
+              '<a href="' + esc(bookUrl) + '" target="_blank" rel="noopener" class="btn btn-success btn-sm">Book Site</a>' +
+            '</div>';
+          }).join('') +
+          '</div>';
+        resultsEl.innerHTML = html;
+      })
+      .catch(function(e) {
+        resultsEl.innerHTML = '<div class="detail-avail-none">Error checking availability. Please try again.</div>';
+      });
+  }
+
+  // Close overlay
+  if (_detailClose) {
+    _detailClose.addEventListener('click', function() {
+      _overlayEl.style.display = 'none';
+      document.body.style.overflow = '';
+    });
+  }
+  if (_overlayEl) {
+    _overlayEl.addEventListener('click', function(e) {
+      if (e.target === _overlayEl) {
+        _overlayEl.style.display = 'none';
+        document.body.style.overflow = '';
+      }
+    });
+  }
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && _overlayEl && _overlayEl.style.display !== 'none') {
+      _overlayEl.style.display = 'none';
+      document.body.style.overflow = '';
+    }
+  });
+
   btn.addEventListener('click', submit);
   ta.addEventListener('keydown', function (e) {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -427,6 +658,8 @@
       cardsEl.innerHTML = _saved.cards;
       if (_saved.seeAll) seeAll.href = _saved.seeAll;
       section.hidden = false;
+      // Re-attach click listeners since restored HTML has no JS handlers
+      if (Array.isArray(_saved.results)) _attachCardListeners(_saved.results);
     }
   } catch(_) {}
 })();

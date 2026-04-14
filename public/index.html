@@ -96,6 +96,35 @@
     <p class="footer-copy">&copy; 2026 CampAlong. All rights reserved.</p>
   </footer>
 
+  <!-- ── Campground detail overlay ──────────────────────────────────────── -->
+  <div id="detail-overlay" class="detail-overlay" style="display:none" role="dialog" aria-modal="true" aria-label="Campground detail">
+    <div class="detail-panel">
+      <button class="detail-close" id="detail-close" aria-label="Close">&times;</button>
+      <div class="detail-gallery" id="detail-gallery"></div>
+      <div class="detail-header">
+        <div>
+          <h2 class="detail-name" id="detail-name"></h2>
+          <div class="detail-meta-row" id="detail-meta-row"></div>
+        </div>
+        <div id="detail-header-right"></div>
+      </div>
+      <div class="detail-section" id="detail-summary-section" style="display:none">
+        <p class="detail-summary" id="detail-summary"></p>
+        <div class="detail-tags" id="detail-tags"></div>
+      </div>
+      <div class="detail-section detail-avail-section" id="detail-avail-section">
+        <h3 class="detail-section-title">Check Availability</h3>
+        <div class="detail-avail-inputs">
+          <div class="form-group"><label>Check-in</label><input type="date" id="detail-checkin" /></div>
+          <div class="form-group"><label>Check-out</label><input type="date" id="detail-checkout" /></div>
+          <div class="form-group"><label>Nights</label><input type="number" id="detail-nights" value="2" min="1" max="14" style="width:80px" /></div>
+          <button class="btn btn-primary" id="detail-avail-btn">Check</button>
+        </div>
+        <div id="detail-avail-results"></div>
+      </div>
+    </div>
+  </div>
+
   <script src="/js/home.js"></script>
 </body>
 </html>

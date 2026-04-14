@@ -377,13 +377,22 @@ let selectedCampground = null;
 
 function _restoreWatchState() {
   try {
-    const saved = JSON.parse(sessionStorage.getItem('watch_state') || 'null');
-    if (!saved || !saved.html) return;
     const si        = $('search-input');
     const container = $('search-results');
     if (!container) return;
     // Only restore if the container hasn't already been filled by a live search
     if (container.querySelector('.search-result-card, .loading')) return;
+
+    // If homepage just ran a search, auto-run that same query here
+    const mirrorQ = sessionStorage.getItem('watch_query_mirror');
+    if (mirrorQ) {
+      sessionStorage.removeItem('watch_query_mirror');
+      if (si) { si.value = mirrorQ; setTimeout(doSearch, 50); }
+      return;
+    }
+
+    const saved = JSON.parse(sessionStorage.getItem('watch_state') || 'null');
+    if (!saved || !saved.html) return;
     if (si) si.value = saved.query || '';
     container.innerHTML = saved.html;
   } catch(_) {}
