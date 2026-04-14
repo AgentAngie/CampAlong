@@ -171,7 +171,7 @@
   }
 
   function _attachCardListeners(results) {
-    var cards = cardsEl.querySelectorAll('.chat-card[data-card-idx]');
+    var cards = cardsEl.querySelectorAll('.chat-card');
     cards.forEach(function(card, i) {
       var c = results[i];
       if (!c) return;
@@ -395,6 +395,7 @@
       // Persist so results survive navigation away and back
       try {
         sessionStorage.setItem('home_chat_state', JSON.stringify({
+          v: 2,
           query: q, chips: chipsEl.innerHTML, intro: introEl.textContent,
           cards: cardsEl.innerHTML, seeAll: seeAll.href,
           results: shown,
@@ -449,7 +450,7 @@
 
     // Reset
     nameEl.textContent   = c.FacilityName || c.name || '';
-    metaEl.innerHTML     = c.location || (c.state ? esc(c.state) : '');
+    metaEl.innerHTML     = esc(c.location || c.county || c.state || '');
     badgeEl.innerHTML    = '';
     availRes.innerHTML   = '';
     summarySection.style.display = 'none';
@@ -650,6 +651,7 @@
   // Restore previous session results so navigating away and back doesn't wipe them
   try {
     var _saved = JSON.parse(sessionStorage.getItem('home_chat_state') || 'null');
+    if (_saved && _saved.v !== 2) { sessionStorage.removeItem('home_chat_state'); _saved = null; }
     if (_saved && _saved.cards) {
       ta.value = _saved.query || '';
       ta.dispatchEvent(new Event('input'));
