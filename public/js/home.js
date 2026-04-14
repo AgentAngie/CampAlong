@@ -392,8 +392,17 @@
     if (shown.length) {
       cardsEl.innerHTML = shown.map(renderCard).join('');
       _attachCardListeners(shown);
-      // Save the query so we can re-run it if user navigates away and comes back
-      try { sessionStorage.setItem('home_last_query', q); } catch(_) {}
+      try {
+        sessionStorage.setItem('home_chat_state', JSON.stringify({
+          v: 3,
+          query: q,
+          chips: chipsEl.innerHTML,
+          intro: introEl.textContent,
+          cards: cardsEl.innerHTML,
+          seeAll: seeAll.href,
+          results: shown,
+        }));
+      } catch(_) {}
       loadPhotos(shown);
     } else {
       // Nothing found — try fetching trending/nearby campgrounds as a fallback
@@ -639,13 +648,19 @@
     }
   });
 
-  // If user previously searched, re-run that query automatically on page load
+  // Restore previous search results instantly — no re-search needed
   try {
-    var _lastQ = sessionStorage.getItem('home_last_query');
-    if (_lastQ) {
-      ta.value = _lastQ;
+    var _saved = JSON.parse(sessionStorage.getItem('home_chat_state') || 'null');
+    if (_saved && _saved.v !== 3) { sessionStorage.removeItem('home_chat_state'); _saved = null; }
+    if (_saved && _saved.cards && Array.isArray(_saved.results)) {
+      ta.value = _saved.query || '';
       ta.dispatchEvent(new Event('input'));
-      submit();
+      chipsEl.innerHTML = _saved.chips || '';
+      introEl.textContent = _saved.intro || '';
+      cardsEl.innerHTML = _saved.cards;
+      if (_saved.seeAll) seeAll.href = _saved.seeAll;
+      section.hidden = false;
+      _attachCardListeners(_saved.results);
     }
   } catch(_) {}
 })();
