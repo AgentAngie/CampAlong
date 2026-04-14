@@ -1563,7 +1563,7 @@ async function _checkDetailAvailability(c) {
           const siteId = s.siteId || s.unitId || '';
           const bookUrl = c.source === 'reserve-california'
             ? `https://www.reservecalifornia.com/Web/Default.aspx#!park/${c.parkId || c.id}/unit/${siteId}`
-            : `https://www.recreation.gov/camping/campgrounds/${c.id}/r/campsiteCalendar.do?loop=&campsiteId=${siteId}`;
+            : `https://www.recreation.gov/camping/campsites/${siteId}`;
           return `
             <div class="detail-avail-site">
               <div class="detail-avail-site-name">${escHtml(s.siteName || s.site || ('Site ' + siteId))}</div>
