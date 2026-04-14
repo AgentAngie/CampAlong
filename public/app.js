@@ -420,17 +420,11 @@ async function doSearch() {
     const rc     = rcRes.status     === 'fulfilled' ? rcRes.value     : [];
     const county = countyRes.status === 'fulfilled' ? countyRes.value : [];
 
-    // Interleave: up to 5 from each source, then remainder, deduplicated by id
+    // Concat all sources then deduplicate by id — same order as homepage
     const seen = new Set();
     const results = [];
     const addIfNew = c => { if (!seen.has(String(c.id))) { seen.add(String(c.id)); results.push(c); } };
-    const maxEach = 5;
-    recGov.slice(0, maxEach).forEach(addIfNew);
-    rc.slice(0, maxEach).forEach(addIfNew);
-    county.slice(0, maxEach).forEach(addIfNew);
-    recGov.slice(maxEach).forEach(addIfNew);
-    rc.slice(maxEach).forEach(addIfNew);
-    county.slice(maxEach).forEach(addIfNew);
+    [...recGov, ...rc, ...county].forEach(addIfNew);
 
     if (results.length === 0) {
       container.innerHTML = `<div style="padding:16px;font-size:14px;color:var(--stone);line-height:1.6">
