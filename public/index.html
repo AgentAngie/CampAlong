@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CampAlong — Your camping companion</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/home.css" />
+</head>
+<body>
+
+  <!-- Nav -->
+  <nav class="home-nav" id="homeNav">
+    <a href="/" class="nav-wordmark">Camp<em>Along</em></a>
+    <ul class="nav-links">
+      <li><a href="/" class="nav-link active">Home</a></li>
+      <li><a href="/app?tab=discover" class="nav-link">Discover</a></li>
+      <li><a href="/app?tab=alerts" class="nav-link">Alerts</a></li>
+      <li><a href="/app?tab=preferences" class="nav-link">Preferences</a></li>
+      <li><a href="/app?tab=settings" class="nav-link">Settings</a></li>
+    </ul>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-img-wrap">
+      <img
+        class="hero-img"
+        src="https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=1800&q=80"
+        alt="Campsite at golden hour"
+        fetchpriority="high"
+      />
+    </div>
+
+    <div class="hero-content">
+      <p class="hero-eyebrow">Find your next escape</p>
+      <h1 class="hero-tagline">Your camping<br /><em>companion.</em></h1>
+
+      <div class="chat-box">
+        <textarea
+          id="chatInput"
+          class="chat-textarea"
+          rows="3"
+          placeholder="Where do you want to camp? Tell me when, who's coming, and what matters to you..."
+        ></textarea>
+        <button class="chat-submit" id="chatSubmit" aria-label="Search">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <path d="M10 3L17 10L10 17M3 10H17" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="chat-suggestions">
+        <button class="chat-suggestion" data-q="Shady family camping near me this weekend">Shady family camping near me</button>
+        <button class="chat-suggestion" data-q="Desert stargazing with dark skies">Desert stargazing</button>
+        <button class="chat-suggestion" data-q="Camping with water access and swimming near me">Swimming &amp; water access</button>
+        <button class="chat-suggestion" data-q="Quiet uncrowded campsite in the mountains">Quiet mountain escape</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Chat results — injected by home.js after query -->
+  <section class="chat-results-section" id="chatResults" hidden>
+    <div class="chat-results-inner">
+      <div class="chat-pref-chips" id="chatChips"></div>
+      <p class="chat-intro-text" id="chatIntro"></p>
+      <div class="chat-cards-grid" id="chatCards"></div>
+      <a class="chat-see-all" id="chatSeeAll" href="/app?tab=discover">See all results in the app</a>
+    </div>
+  </section>
+
+  <!-- Trending -->
+  <section class="trending-section">
+    <div class="trending-inner">
+      <div class="trending-header">
+        <h2 class="trending-title">Trending near San Diego</h2>
+        <a href="/app" class="trending-see-all">See all</a>
+      </div>
+
+      <div class="trending-grid" id="trendingGrid">
+        <!-- Populated by home.js -->
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="home-footer">
+    <span class="footer-wordmark">Camp<em>Along</em></span>
+    <nav class="footer-links">
+      <a href="/app">Discover</a>
+      <a href="/app">Alerts</a>
+      <a href="/app">Preferences</a>
+    </nav>
+    <p class="footer-copy">&copy; 2026 CampAlong. All rights reserved.</p>
+  </footer>
+
+  <script src="/js/home.js"></script>
+</body>
+</html>

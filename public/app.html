@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CampAlong</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400;1,500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+  <link href="https://api.mapbox.com/mapbox-gl-js/v3.4.0/mapbox-gl.css" rel="stylesheet" />
+</head>
+<body>
+
+<nav class="app-nav-bar">
+  <div class="app-nav-bar-inner">
+    <a class="nav-wordmark" href="/">Camp<em>Along</em></a>
+    <ul class="nav-links">
+      <li><a class="nav-link" href="/" data-nav="">Home</a></li>
+      <li><a class="nav-link" href="/app?tab=discover" data-nav="discover">Discover</a></li>
+      <li><a class="nav-link" href="/app?tab=watch" data-nav="watch">Alerts</a></li>
+      <li><a class="nav-link" href="/app?tab=preferences" data-nav="preferences">Preferences</a></li>
+      <li><a class="nav-link" href="/app?tab=settings" data-nav="settings">Settings</a></li>
+    </ul>
+  </div>
+</nav>
+
+<main>
+
+  <!-- ═══════════════════════════ DASHBOARD ═══════════════════════════ -->
+  <div id="tab-dashboard" class="tab active">
+
+    <!-- Setup banner -->
+    <div id="setup-banner" class="setup-banner">
+      <div class="setup-banner-text">
+        <strong>Connect Recreation.gov</strong> to search for campsites and get availability alerts.
+      </div>
+      <button id="btn-setup-rec-gov" class="btn btn-primary" style="font-size:13px">Set up now</button>
+      <button id="btn-dismiss-setup" class="setup-banner-dismiss" title="Dismiss">&times;</button>
+    </div>
+
+    <!-- Hero -->
+    <div class="hero-row">
+      <div class="hero-text">
+        <h1 class="hero-title">Your <em>watchlist</em></h1>
+        <div class="hero-sub-row">
+          <p class="hero-sub">We check around the clock and alert you the moment a site opens.</p>
+          <button class="btn-check-link" id="btn-check-now">Check now</button>
+        </div>
+      </div>
+      <button class="btn-watch-pill" id="btn-goto-watch">
+        <svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true">
+          <circle cx="6.5" cy="6.5" r="4.5" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M10 10L13 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        Watch a campground
+      </button>
+    </div>
+
+    <!-- Stats bar -->
+    <div class="stats-bar">
+      <div class="stat-group">
+        <span class="stat-num" id="stat-watching">—</span>
+        <span class="stat-lbl">Watching</span>
+      </div>
+      <div class="stat-div"></div>
+      <div class="stat-group">
+        <span class="stat-num" id="stat-available">—</span>
+        <span class="stat-lbl">Available now</span>
+      </div>
+      <div class="stat-div"></div>
+      <div class="stat-group">
+        <span class="stat-num" id="stat-checks">—</span>
+        <span class="stat-lbl">Checks today</span>
+      </div>
+      <div class="stat-div"></div>
+      <div class="stat-group">
+        <span class="stat-num" id="stat-alerts">—</span>
+        <span class="stat-lbl">Alerts sent</span>
+      </div>
+      <div class="conn-status-wrap">
+        <button class="conn-trigger" id="conn-trigger" type="button" aria-expanded="false">
+          <span class="conn-dot" id="conn-dot"></span>
+          <span class="conn-lbl" id="conn-lbl">Checking&hellip;</span>
+          <svg class="conn-chevron" width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+            <path d="M2 3.5L5 6.5L8 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <div class="conn-dropdown" id="conn-dropdown">
+          <div class="conn-row" id="cr-recgov">
+            <span class="cr-dot"></span>
+            <span class="cr-name">Recreation.gov</span>
+            <span class="cr-status">—</span>
+          </div>
+          <div class="conn-row" id="cr-reserveca">
+            <span class="cr-dot green"></span>
+            <span class="cr-name">ReserveCalifornia</span>
+            <span class="cr-status">Connected</span>
+          </div>
+          <div class="conn-row" id="cr-email">
+            <span class="cr-dot"></span>
+            <span class="cr-name">Email (Gmail)</span>
+            <span class="cr-status">—</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Empty state -->
+    <div id="watchlist-empty" class="empty-state" style="display:none">
+      <svg class="empty-state-icon" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round">
+        <path d="M8 52L32 12L56 52H8Z"/>
+        <path d="M20 52L32 30L44 52"/>
+        <line x1="4" y1="52" x2="60" y2="52"/>
+      </svg>
+      <h3>Nothing on your watchlist yet</h3>
+      <p>Add a campground and we'll alert you the moment a site opens up.</p>
+      <button class="btn btn-primary" data-tab-link="add">Add Your First Campground</button>
+    </div>
+
+    <!-- Watchlist grid -->
+    <div id="watchlist-items" class="watchlist-grid"></div>
+
+    <!-- Cancellation patterns -->
+    <div id="patterns-section" style="margin-top:40px;display:none">
+      <h3 style="font-family:var(--font-serif);font-size:20px;font-weight:400;margin-bottom:6px">Cancellation Patterns</h3>
+      <p class="subtitle" style="margin-bottom:20px">Historical data from your watched campgrounds — when cancellations tend to appear.</p>
+      <div id="patterns-list" class="patterns-grid"></div>
+    </div>
+
+  </div>
+
+  <!-- ═══════════════════════════ ADD CAMPGROUND ═══════════════════════ -->
+  <div id="tab-add" class="tab">
+    <div class="tab-hero">
+      <img class="tab-hero-img" src="https://images.unsplash.com/photo-1501854140801-50d01698950b?w=1400&q=80" alt="Sunny lake campground" />
+      <div class="tab-hero-overlay"></div>
+      <div class="tab-hero-content">
+        <h2>Never miss <em>a spot.</em></h2>
+        <p class="tab-hero-sub">Search any campground — we check every 5 minutes and alert you the moment something opens up.</p>
+      </div>
+    </div>
+
+    <div class="search-bar" style="margin-top: 40px">
+      <input type="text" id="search-input" placeholder="e.g. Yosemite, Pfeiffer Big Sur, Lake Tahoe&hellip;" />
+      <button class="btn btn-primary" id="btn-search">Search</button>
+    </div>
+
+    <div id="search-results"></div>
+
+    <div id="add-form-section" class="add-form-section" style="display:none">
+      <h3 id="selected-campground-name"></h3>
+
+      <h4>Date Range to Monitor</h4>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Earliest check-in</label>
+          <input type="date" id="date-start" />
+        </div>
+        <div class="form-group">
+          <label>Latest check-out</label>
+          <input type="date" id="date-end" />
+        </div>
+        <div class="form-group">
+          <label>Min. consecutive nights</label>
+          <input type="number" id="min-nights" value="2" min="1" max="14" />
+        </div>
+      </div>
+
+      <div class="pref-inherit-note">
+        <span class="pref-dot">&#10003;</span>
+        Your <a href="#" data-tab-link="preferences">preference profile</a> will automatically filter alerts for this campground.
+        <span id="pref-summary-inline"></span>
+      </div>
+
+      <button class="btn btn-success" id="btn-add-to-watchlist">
+        Add to Watchlist &amp; Start Monitoring
+      </button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════ PREFERENCES ═════════════════════════ -->
+  <div id="tab-preferences" class="tab">
+    <div class="tab-hero">
+      <img class="tab-hero-img" src="https://images.unsplash.com/photo-1448375240586-882707db888b?w=1400&q=80" alt="Forest campground" />
+      <div class="tab-hero-overlay"></div>
+      <div class="tab-hero-content">
+        <h2>Preference <em>profile.</em></h2>
+        <p class="tab-hero-sub">Set once — every search, alert, and recommendation shapes itself around these.</p>
+      </div>
+    </div>
+
+    <div class="prefs-card">
+
+      <div class="prefs-group">
+        <h3>Environment</h3>
+        <div class="prefs-grid">
+          <label class="pref-toggle">
+            <input type="checkbox" id="gp-treecover" />
+            <div class="toggle-content">
+              <div class="toggle-label">Tree cover</div>
+              <div class="toggle-desc">Wooded sites with oak, pine, redwood, cedar, etc.</div>
+            </div>
+          </label>
+          <label class="pref-toggle">
+            <input type="checkbox" id="gp-shade" />
+            <div class="toggle-content">
+              <div class="toggle-label">Shaded site</div>
+              <div class="toggle-desc">Full or partial canopy shade at the actual campsite</div>
+            </div>
+          </label>
+          <label class="pref-toggle">
+            <input type="checkbox" id="gp-nearWater" />
+            <div class="toggle-content">
+              <div class="toggle-label">Near water</div>
+              <div class="toggle-desc">Lake, creek, river, beach, or reservoir nearby</div>
+            </div>
+          </label>
+          <label class="pref-toggle">
+            <input type="checkbox" id="gp-avoidExposed" />
+            <div class="toggle-content">
+              <div class="toggle-label">Avoid exposed sites</div>
+              <div class="toggle-desc">Skip open, sunny, or unshaded sites</div>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <div class="prefs-group">
+        <h3>Family &amp; Terrain</h3>
+        <div class="prefs-grid">
+          <label class="pref-toggle">
+            <input type="checkbox" id="gp-kidFriendlyTerrain" />
+            <div class="toggle-content">
+              <div class="toggle-label">Kid-friendly terrain</div>
+              <div class="toggle-desc">Flat or level ground — avoid steep, rocky, or sloped sites</div>
+            </div>
+          </label>
+          <label class="pref-toggle">
+            <input type="checkbox" id="gp-trailAccess" />
+            <div class="toggle-content">
+              <div class="toggle-label">Trail access</div>
+              <div class="toggle-desc">Campground has hiking trails or a trailhead nearby</div>
+            </div>
+          </label>
+          <label class="pref-toggle">
+            <input type="checkbox" id="gp-avoidRVLoops" />
+            <div class="toggle-content">
+              <div class="toggle-label">Avoid RV loops</div>
+              <div class="toggle-desc">Skip hookup, full-electric, and RV-heavy sites</div>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <div class="prefs-group" style="border-bottom:none">
+        <h3>Group Size</h3>
+        <div class="form-group" style="max-width:260px">
+          <label>Minimum site capacity (people)</label>
+          <input type="number" id="gp-minOccupants" value="1" min="1" max="20" style="width:90px" />
+          <small>Alert only on sites that fit at least this many people</small>
+        </div>
+      </div>
+
+      <div class="prefs-actions">
+        <button class="btn btn-success" id="btn-save-preferences">Save Preferences</button>
+        <span id="prefs-saved-msg" style="display:none;color:var(--accent);font-size:13px;font-weight:500">Saved</span>
+      </div>
+
+      <div class="prefs-preview" id="prefs-preview" style="display:none">
+        <h4>Alert preview</h4>
+        <div class="alert-preview-box" id="alert-preview-box"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════ DISCOVER ════════════════════════════ -->
+  <div id="tab-recommendations" class="tab">
+    <div class="tab-hero">
+      <img class="tab-hero-img" src="https://images.unsplash.com/photo-1510672981848-a1c4f1cb5ccf?w=1400&q=80" alt="Oak woodland campground" />
+      <div class="tab-hero-overlay"></div>
+      <div class="tab-hero-content">
+        <h2>Discover <em>campgrounds.</em></h2>
+        <p class="tab-hero-sub">Top picks scored against your preference profile — shade, water, terrain, and family-friendly amenities.</p>
+      </div>
+    </div>
+
+    <div class="rec-controls" style="margin-top: 40px">
+      <div class="form-group">
+        <label>Geographic Region</label>
+        <select id="rec-region" style="max-width:320px">
+          <option value="">Select a region&hellip;</option>
+        </select>
+      </div>
+      <div>
+        <button class="btn btn-primary" id="btn-get-recommendations">Find Campgrounds</button>
+      </div>
+    </div>
+
+    <!-- Filter panel — shown after results load -->
+    <div id="filter-panel" style="display:none">
+      <div class="filter-panel-header">
+        <button class="filter-toggle-btn" id="filter-toggle-btn">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+            <path d="M2 3.5h10M4 7h6M6 10.5h2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+          <span id="filter-toggle-label">Filters</span>
+        </button>
+        <button class="filter-reset-btn" id="filter-reset-btn" style="display:none">Reset all</button>
+      </div>
+      <div id="filter-panel-body" class="filter-panel-body" style="display:none">
+        <!-- Basic filters -->
+        <div class="filter-group">
+          <div class="filter-group-title">Minimum star rating</div>
+          <div class="filter-chips" id="filter-stars">
+            <button class="filter-chip active" data-val="0">Any</button>
+            <button class="filter-chip" data-val="2">2+</button>
+            <button class="filter-chip" data-val="3">3+</button>
+            <button class="filter-chip" data-val="4">4+</button>
+            <button class="filter-chip" data-val="5">5 only</button>
+          </div>
+        </div>
+        <div class="filter-group">
+          <div class="filter-group-title">Access type</div>
+          <div class="filter-chips">
+            <label class="filter-chip-toggle">
+              <input type="checkbox" id="filter-drive-in" checked />
+              <span>Drive-in only</span>
+            </label>
+          </div>
+          <div class="filter-hint">Excludes hike-in, walk-in, and boat-in campgrounds</div>
+        </div>
+        <div class="filter-group">
+          <div class="filter-group-title">Amenities</div>
+          <div class="filter-checks">
+            <label class="filter-check-item"><input type="checkbox" id="filter-water" /> Near water</label>
+            <label class="filter-check-item"><input type="checkbox" id="filter-shade" /> Shade / tree cover</label>
+            <label class="filter-check-item"><input type="checkbox" id="filter-family" checked /> Family amenities</label>
+            <label class="filter-check-item"><input type="checkbox" id="filter-flush" /> Flush toilets / showers</label>
+          </div>
+        </div>
+        <!-- AI filters — shown after agent results arrive -->
+        <div class="filter-group" id="filter-ai-group" style="display:none">
+          <div class="filter-group-title">
+            Crowd level
+            <span class="ai-filter-badge">AI</span>
+          </div>
+          <div class="filter-chips" id="filter-crowd">
+            <button class="filter-chip active" data-val="">Any</button>
+            <button class="filter-chip" data-val="uncrowded">Quiet</button>
+            <button class="filter-chip" data-val="moderate">Moderate</button>
+            <button class="filter-chip" data-val="busy">Busy</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hidden legacy prefs wired by JS -->
+    <input type="hidden" id="rec-pref-water" value="false" />
+    <input type="hidden" id="rec-pref-shade" value="false" />
+    <input type="hidden" id="rec-pref-family" value="true" />
+
+    <div id="recommendations-results"></div>
+  </div>
+
+  <!-- ═══════════════════════════ SETTINGS ════════════════════════════ -->
+  <div id="tab-settings" class="tab">
+    <div class="tab-hero">
+      <img class="tab-hero-img" src="https://images.unsplash.com/photo-1509316785289-025f5b846b35?w=1400&q=80" alt="Desert camping at sunrise" />
+      <div class="tab-hero-overlay"></div>
+      <div class="tab-hero-content">
+        <h2>Your <em>settings.</em></h2>
+        <p class="tab-hero-sub">Connect your accounts, set up alerts, and keep everything running in the background.</p>
+      </div>
+    </div>
+
+    <!-- Recreation.gov -->
+    <div class="settings-section">
+      <h3>Recreation.gov API Key</h3>
+      <p>
+        <strong>How to get your key:</strong> Go to
+        <a href="https://ridb.recreation.gov/profile" target="_blank">ridb.recreation.gov/profile</a>,
+        sign in, click <strong>Enable Developer Access</strong>, then copy the key from the APIKey field.
+      </p>
+      <small style="color:var(--stone);display:block;margin-bottom:12px">Stored encrypted on disk — never plaintext.</small>
+      <div class="input-row">
+        <input type="text" id="rec-gov-api-key" placeholder="Paste your API key&hellip;" style="font-family:ui-monospace,monospace;font-size:13px" />
+        <button class="btn btn-secondary" id="btn-toggle-rec-gov" type="button">Hide</button>
+        <button class="btn btn-primary" id="btn-save-rec-gov">Save</button>
+        <button class="btn btn-secondary" id="btn-validate-rec-gov" type="button">Validate</button>
+        <span id="validate-status" style="font-size:13px;align-self:center;margin-left:4px"></span>
+      </div>
+    </div>
+
+    <!-- Email / Gmail OAuth -->
+    <div class="settings-section">
+      <h3>Email Alerts</h3>
+      <div id="gmail-status-card"></div>
+      <div class="form-group" style="margin-top:16px;max-width:360px">
+        <label>Forward alerts to (optional — defaults to your Gmail)</label>
+        <div class="input-row" style="margin-top:6px">
+          <input type="email" id="alert-email" placeholder="other@example.com" />
+          <button class="btn btn-primary" id="btn-save-alert-email">Save</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Twilio SMS -->
+    <div class="settings-section">
+      <div class="settings-section-header">
+        <h3>SMS Alerts via Twilio</h3>
+        <span class="badge inactive" id="badge-twilio-detail" style="font-size:11px">Not configured</span>
+      </div>
+      <p>Get instant text alerts. A free Twilio trial account works fine.
+        <a href="https://www.twilio.com/try-twilio" target="_blank">Create a free account</a>
+      </p>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Account SID</label>
+          <input type="password" id="twilio-sid" placeholder="ACxxxxxxxxxxxxxxxx" />
+        </div>
+        <div class="form-group">
+          <label>Auth Token</label>
+          <input type="password" id="twilio-token" placeholder="Auth Token" />
+        </div>
+        <div class="form-group">
+          <label>Twilio phone number (From)</label>
+          <input type="text" id="twilio-from" placeholder="+15551234567" />
+        </div>
+        <div class="form-group">
+          <label>Your phone number (To)</label>
+          <input type="text" id="twilio-to" placeholder="+15559876543" />
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:20px">
+        <button class="btn btn-primary" id="btn-save-twilio">Save SMS Settings</button>
+        <button class="btn btn-secondary" id="btn-test-sms">Send Test SMS</button>
+        <span id="sms-test-result" style="font-size:13px;display:none"></span>
+      </div>
+      <div class="sms-preview-box">
+        <div class="sms-preview-label">Example message you'll receive</div>
+        <div class="sms-bubble">
+          Refugio State Beach<br>
+          Site 23 &middot; Jun 15&ndash;17 (2 nights)<br>
+          Oak trees, creek nearby, tent site<br>
+          reservecalifornia.com/park/120085
+        </div>
+      </div>
+    </div>
+
+    <!-- ReserveCalifornia -->
+    <div class="settings-section">
+      <h3>ReserveCalifornia</h3>
+      <p>No API key required. California State Parks monitoring is built in — search for CA state parks in the <a href="#" data-tab-link="add">Watch tab</a> and select ReserveCalifornia as the source.</p>
+    </div>
+
+    <!-- Monitoring interval -->
+    <div class="settings-section">
+      <h3>Monitoring Interval</h3>
+      <p>How often to poll for cancellations. Every 5 minutes is a good balance between responsiveness and being a polite API citizen.</p>
+      <div class="input-row" style="max-width:260px">
+        <input type="number" id="check-interval" value="5" min="1" max="60" style="width:80px" />
+        <label style="white-space:nowrap;font-size:13px;align-self:center;color:var(--earth)">minutes between checks</label>
+        <button class="btn btn-primary" id="btn-save-interval">Save</button>
+      </div>
+      <p style="margin-top:10px;font-size:12px;color:var(--stone)">Restart the server after changing this setting.</p>
+    </div>
+  </div>
+
+</main>
+
+<div id="toast" class="toast"></div>
+
+<!-- ═══════════════════════ CAMPGROUND DETAIL OVERLAY ═══════════════════════ -->
+<div id="detail-overlay" class="detail-overlay" role="dialog" aria-modal="true" aria-label="Campground detail" style="display:none">
+  <div class="detail-panel">
+    <button class="detail-close" id="detail-close" aria-label="Close">&times;</button>
+
+    <!-- Photo gallery -->
+    <div class="detail-gallery" id="detail-gallery"></div>
+
+    <!-- Header -->
+    <div class="detail-header">
+      <div class="detail-header-left">
+        <h1 class="detail-name" id="detail-name">Loading…</h1>
+        <div class="detail-meta-row" id="detail-meta-row"></div>
+      </div>
+      <div class="detail-header-right" id="detail-header-right"></div>
+    </div>
+
+    <!-- AI Summary -->
+    <div class="detail-section" id="detail-summary-section" style="display:none">
+      <p class="detail-summary" id="detail-summary"></p>
+      <div class="detail-tags" id="detail-tags"></div>
+    </div>
+
+    <!-- Key attributes -->
+    <div class="detail-section" id="detail-attrs-section" style="display:none">
+      <div class="detail-attrs" id="detail-attrs"></div>
+    </div>
+
+    <!-- Availability checker -->
+    <div class="detail-section detail-avail-section">
+      <h3 class="detail-section-title">Check Availability</h3>
+      <div class="detail-avail-inputs">
+        <div class="form-group">
+          <label>Check-in</label>
+          <input type="date" id="detail-checkin" />
+        </div>
+        <div class="form-group">
+          <label>Check-out</label>
+          <input type="date" id="detail-checkout" />
+        </div>
+        <div class="form-group">
+          <label>Nights</label>
+          <input type="number" id="detail-nights" value="2" min="1" max="14" style="width:80px" />
+        </div>
+        <button class="btn btn-primary" id="detail-avail-btn">Check</button>
+      </div>
+      <div id="detail-avail-results"></div>
+    </div>
+
+    <!-- Best Sites panel -->
+    <div class="detail-section" id="detail-sites-section" style="display:none">
+      <h3 class="detail-section-title">Best Sites</h3>
+      <div id="detail-sites-content"></div>
+    </div>
+
+    <!-- Site map -->
+    <div class="detail-section" id="detail-sitemap-section" style="display:none">
+      <h3 class="detail-section-title">Site Map</h3>
+      <div id="detail-sitemap-content"></div>
+    </div>
+
+    <!-- What campers say -->
+    <div class="detail-section" id="detail-reviews-section" style="display:none">
+      <h3 class="detail-section-title">What Campers Say</h3>
+      <div id="detail-reviews-content"></div>
+    </div>
+
+    <!-- Nearby info -->
+    <div class="detail-section" id="detail-nearby-section" style="display:none">
+      <h3 class="detail-section-title">Nearby</h3>
+      <div id="detail-nearby-content"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ FILTERS DRAWER (MOBILE) ════════════════════════ -->
+<div id="filters-drawer" class="filters-drawer" role="dialog" aria-modal="true" aria-label="Filters" style="display:none">
+  <div class="filters-drawer-inner" id="filters-drawer-inner"></div>
+</div>
+<div id="filters-backdrop" class="filters-backdrop" style="display:none"></div>
+
+<script src="https://api.mapbox.com/mapbox-gl-js/v3.4.0/mapbox-gl.js"></script>
+<script src="/app.js"></script>
+</body>
+</html>
