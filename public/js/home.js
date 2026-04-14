@@ -392,17 +392,8 @@
     if (shown.length) {
       cardsEl.innerHTML = shown.map(renderCard).join('');
       _attachCardListeners(shown);
-      // Persist so results survive navigation away and back
-      try {
-        sessionStorage.setItem('home_chat_state', JSON.stringify({
-          v: 2,
-          query: q, chips: chipsEl.innerHTML, intro: introEl.textContent,
-          cards: cardsEl.innerHTML, seeAll: seeAll.href,
-          results: shown,
-        }));
-        // Also mirror to watch_state so Alerts tab auto-populates
-        sessionStorage.setItem('watch_query_mirror', q);
-      } catch(_) {}
+      // Save the query so we can re-run it if user navigates away and comes back
+      try { sessionStorage.setItem('home_last_query', q); } catch(_) {}
       loadPhotos(shown);
     } else {
       // Nothing found — try fetching trending/nearby campgrounds as a fallback
@@ -648,20 +639,13 @@
     }
   });
 
-  // Restore previous session results so navigating away and back doesn't wipe them
+  // If user previously searched, re-run that query automatically on page load
   try {
-    var _saved = JSON.parse(sessionStorage.getItem('home_chat_state') || 'null');
-    if (_saved && _saved.v !== 2) { sessionStorage.removeItem('home_chat_state'); _saved = null; }
-    if (_saved && _saved.cards) {
-      ta.value = _saved.query || '';
+    var _lastQ = sessionStorage.getItem('home_last_query');
+    if (_lastQ) {
+      ta.value = _lastQ;
       ta.dispatchEvent(new Event('input'));
-      chipsEl.innerHTML = _saved.chips || '';
-      introEl.textContent = _saved.intro || '';
-      cardsEl.innerHTML = _saved.cards;
-      if (_saved.seeAll) seeAll.href = _saved.seeAll;
-      section.hidden = false;
-      // Re-attach click listeners since restored HTML has no JS handlers
-      if (Array.isArray(_saved.results)) _attachCardListeners(_saved.results);
+      submit();
     }
   } catch(_) {}
 })();

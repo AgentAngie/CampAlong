@@ -384,9 +384,8 @@ function _restoreWatchState() {
     if (container.querySelector('.search-result-card, .loading')) return;
 
     // If homepage just ran a search, auto-run that same query here
-    const mirrorQ = sessionStorage.getItem('watch_query_mirror');
-    if (mirrorQ) {
-      sessionStorage.removeItem('watch_query_mirror');
+    const mirrorQ = sessionStorage.getItem('home_last_query');
+    if (mirrorQ && !sessionStorage.getItem('watch_state')) {
       if (si) { si.value = mirrorQ; setTimeout(doSearch, 50); }
       return;
     }
