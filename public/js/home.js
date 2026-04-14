@@ -459,15 +459,9 @@
     // Gallery — placeholder while loading
     galleryEl.innerHTML = '<div class="detail-gallery-placeholder"><span class="detail-gallery-placeholder-label">' + esc(c.FacilityName || c.name || '') + '</span></div>';
 
-    // For county parks: hide availability checker, show booking link
+    // For county parks: hide availability checker, show AI summary + booking link
     if (source === 'county') {
       availSection.style.display = 'none';
-      // Show description + Book button
-      summarySection.style.display = '';
-      summaryEl.textContent = c.description || '';
-      tagsEl.innerHTML = (c.tags || []).map(function(t) {
-        return '<span class="detail-chip chip-best">' + esc(t) + '</span>';
-      }).join('');
       // Replace avail section with a Book button
       var bookDiv = document.getElementById('detail-county-book');
       if (!bookDiv) {
@@ -477,6 +471,8 @@
         availSection.parentNode.insertBefore(bookDiv, availSection.nextSibling);
       }
       bookDiv.innerHTML = '<a href="' + esc(c.bookingUrl || '#') + '" target="_blank" rel="noopener" class="btn btn-primary">Book on county website</a>';
+      // Load AI summary using the park's description as seed data
+      _loadHomeSummary(c);
     } else {
       // Remove county book div if present
       var old = document.getElementById('detail-county-book');
@@ -531,12 +527,16 @@
     section.style.display = '';
     summaryEl.innerHTML = '<span class="agent-shimmer" style="display:block;height:14px;margin-bottom:8px"></span>' +
                           '<span class="agent-shimmer" style="display:block;height:14px;width:65%"></span>';
-    tagsEl.innerHTML = '';
+    // Pre-fill static tags while AI loads (county parks have tags[])
+    tagsEl.innerHTML = Array.isArray(c.tags) ? c.tags.map(function(t) {
+      return '<span class="detail-chip chip-best">' + esc(t) + '</span>';
+    }).join('') : '';
 
     var id   = c.FacilityID || c.id || '';
     var name = c.FacilityName || c.name || '';
-    var state = c.state || '';
-    var params = 'name=' + encodeURIComponent(name) + '&state=' + encodeURIComponent(state);
+    var state = c.state || (c.location ? c.location.split(',').pop().trim() : '');
+    var desc  = c.description || '';
+    var params = 'name=' + encodeURIComponent(name) + '&state=' + encodeURIComponent(state) + '&description=' + encodeURIComponent(desc.slice(0, 400));
 
     fetch('/api/agent/summary/' + encodeURIComponent(id) + '?' + params)
       .then(function(r) { return r.json(); })
